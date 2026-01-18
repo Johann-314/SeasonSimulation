@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import copy
 
 # class Team():
 #     def __init__(self,Name: str):
@@ -54,7 +55,7 @@ class Season():
             considerGames=Games
         for T,R in considerGames.items():
             p1,p2=points(T,R)
-            print(p1,p2)
+            #print(p1,p2)
             if R:
                 Table.loc[T[0],"games"]+=1
                 Table.loc[T[1],"games"]+=1
@@ -68,8 +69,8 @@ class Season():
                 Table.loc[y,"position"]=curpos
             else:
                 curpoints=Table.loc[y,"points"]
-                Table.loc[y,"position"]=i
-                curpos=i
+                Table.loc[y,"position"]=i+1#0 ndexed
+                curpos=i+1
         # for i in range(len(Table)):
         #     if Table.iloc[i]["points"]==curpoints:
         #         Table.iloc[i]["position"]=curpos
@@ -79,7 +80,23 @@ class Season():
         #         curpos=i
         return Table
     def brute_rest_simulation(self):
-        
+        left=[]
+        for T,R in self.Matchups.items():
+            if not R:
+                left.append(T)
+        n=len(left)
+        if n==0:
+            return [self.calculateTable()]
+        standings=[]
+        possible_Results=[[(25,0),(25,0)],[(0,25),(0,25)]]#,[(25,0),(0,25),(15,0)]][(0,25),(0,25)],[(25,0),(0,25),(0,15)]]
+        k=len(possible_Results)
+        # for i in range(k**n):
+        #     S_alt=self.copy()
+        for R in possible_Results:
+            S_alt=copy.deepcopy(self)
+            S_alt.Matchups[left[0]]=R
+            standings=standings + S_alt.brute_rest_simulation()
+        return standings
                 
 def VBLigaWS2526():
     Teams=[("BCV","BCV"),("GUS","GUS"),("Los Pankows","Los"),("Who Knows","Who"),("Theoretiker","Theo"),
@@ -133,7 +150,19 @@ def VBLigaWS2526():
     Games[("TG Sonnenschein","TU Sport I")]=[(0,25),(25,0),(0,15)]#not actual result
     Games[("TG Sonnenschein","GUS")]=[(25,0),(0,25),(15,0)]#Result doesn't matter appearantly
     S=Season("2526",[i[0] for i in Teams],Games)
+    #S_=S.copy()
     print(S.CurTable)
+    #print([i for i in S.CurTable])
+    standings=(S.brute_rest_simulation())#somehow wrong
+    print(standings[0])
+    places={}
+    for s in standings:
+        place=s.loc["TU Sport II","position"]
+        if place in places:
+            places[place]+=1
+        else:
+            places[place]=1
+    print(places)
 
 VBLigaWS2526()
 
