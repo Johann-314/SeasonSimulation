@@ -20,13 +20,14 @@ import copy
 #         elif team==self.Team2:
 #             return 3-T1Points
 
-def points(TeamNames,Results):
+def points(TeamNames,Results,special=True):
     if not Results:
         return 0,0
-    if TeamNames[0]=="GUS":
-        return (0,3)
-    elif TeamNames[1]=="GUS":
-        return (3,0)
+    if special:
+        if TeamNames[0]=="GUS":
+            return (0,3)
+        elif TeamNames[1]=="GUS":
+            return (3,0)
     T1Wins=sum([1 for i in Results if i[0]>i[1]])
     T2Wins=sum([1 for i in Results if i[0]<i[1]])
     T1Points=T1Wins if T1Wins<2 else (2 if T2Wins==1 else 3)
@@ -39,11 +40,11 @@ class Season():
         self.Teams=Teams
         self.Matchups=Matchups
         self.CurTable=CurTable
-        self.CurTable=self.calculateTable()
-    def calculateTable(self,Games=None,type="Whitelist",reset=True):
+        self.CurTable=self.calculateTable(updateStrength=True)
+    def calculateTable(self,Games=None,type="Whitelist",reset=True,updateStrength=False):
         if reset:
             Table=pd.DataFrame({"points":[0 for i in self.Teams],"position":[0 for i in self.Teams],
-                                "games":[0 for i in self.Teams]},
+                                "games":[0 for i in self.Teams],"setdiff":[0 for i in self.Teams]},
                                index=[i for i in self.Teams])
         else:
             Table=self.CurTable
@@ -59,18 +60,41 @@ class Season():
             if R:
                 Table.loc[T[0],"games"]+=1
                 Table.loc[T[1],"games"]+=1
+                if p1==0:
+                    Table.loc[T[0],"setdiff"]-=2
+                    Table.loc[T[1],"setdiff"]+=2
+                elif p1==1:
+                    Table.loc[T[0],"setdiff"]-=1
+                    Table.loc[T[1],"setdiff"]+=1
+                elif p2==1:
+                    Table.loc[T[0],"setdiff"]+=1
+                    Table.loc[T[1],"setdiff"]-=1
+                elif p2==0:
+                    Table.loc[T[0],"setdiff"]+=2
+                    Table.loc[T[1],"setdiff"]-=2
             Table.loc[T[0],"points"]+=p1
             Table.loc[T[1],"points"]+=p2
-        Table.sort_values("points",inplace=True,key=lambda x:-x)
+        Table.sort_values(by=["points","setdiff"],inplace=True,key=lambda x:-x)
         curpoints=Table.iloc[0]["points"]
+        curdiff=Table.iloc[0]["setdiff"]
         curpos=1
         for i,y in enumerate(Table.index):
-            if Table.loc[y,"points"]==curpoints:
+            if Table.loc[y,"points"]==curpoints and Table.loc[y,"setdiff"]==curdiff:
                 Table.loc[y,"position"]=curpos
             else:
                 curpoints=Table.loc[y,"points"]
                 Table.loc[y,"position"]=i+1#0 ndexed
                 curpos=i+1
+        if updateStrength:
+            Table.insert(4,"strength",[1 for _ in self.Teams])
+            for _ in range(50):
+                old_Table=copy.deepcopy(Table)
+                for T,R in considerGames.items():
+                    p1,p2=points(T,R,special=False)
+                    Table.loc[T[0],"strength"]+=p1*old_Table.loc[T[1],"strength"]/old_Table.loc[T[0],"games"]
+                    Table.loc[T[1],"strength"]+=p2*old_Table.loc[T[0],"strength"]/old_Table.loc[T[1],"games"]
+                Table["strength"]=len(self.Teams)*Table["strength"]/sum(Table["strength"])
+            
         # for i in range(len(Table)):
         #     if Table.iloc[i]["points"]==curpoints:
         #         Table.iloc[i]["position"]=curpos
@@ -97,6 +121,45 @@ class Season():
             S_alt.Matchups[left[0]]=R
             standings=standings + S_alt.brute_rest_simulation()
         return standings
+    
+    def strength_based_game_sim(self,Matches=[],assumptions={}):
+        S_alt=copy.deepcopy(self)
+        for k in assumptions:
+            S_alt.Matchups[k]=assumptions[k]
+        if not Matches:
+            for T,R in S_alt.Matchups.items():
+                if not R:
+                    Matches.append(T)
+        #print(("Theoretiker","TU Sport I") in Matches)
+        for T in Matches:
+            s1,s2=self.CurTable.loc[T[0],"strength"],self.CurTable.loc[T[1],"strength"]
+            G1=(25,0) if np.random.random()<s1/(s1+s2) else (0,25)
+            G2=(25,0) if np.random.random()<s1/(s1+s2) else (0,25)
+            if G1!=G2:
+                G3=(25,0) if np.random.random()<s1/(s1+s2) else (0,15)
+                S_alt.Matchups[T]=[G1,G2,G3]
+            else:
+                S_alt.Matchups[T]=[G1,G2]
+        return S_alt.calculateTable(updateStrength=False)
+    def possible_range(self,Team):#not completed
+        print("Not done yet")
+        left_others=[]
+        left_own=[]
+        for T,R in self.Matchups.items():
+            if not R:
+                if Team in T:
+                    left_own.append(T)
+                else:
+                    left_others.append(T)
+        possible_Results=[[(25,0),(25,0)],[(0,25),(0,25)],[(25,0),(0,25),(15,0)],[(0,25),(0,25)],[(25,0),(0,25),(0,15)]]
+        #best in place 0, worst in 1st place
+        S_alt=copy.deepcopy(self)
+        start_pos=self.CurTable[Team]
+        for G in left_own:
+            if G[0]==Team:
+                S_alt.Matchups[G]=possible_Results[0]
+            else:
+                S_alt.Matchups[G]=possible_Results[1]
                 
 def VBLigaWS2526():
     Teams=[("BCV","BCV"),("GUS","GUS"),("Los Pankows","Los"),("Who Knows","Who"),("Theoretiker","Theo"),
@@ -153,31 +216,47 @@ def VBLigaWS2526():
     #S_=S.copy()
     print(S.CurTable)
     #print([i for i in S.CurTable])
-    standings=(S.brute_rest_simulation())#somehow wrong
-    print(standings[0])
-    places={}
-    for s in standings:
-        place=s.loc["TU Sport II","position"]
-        if place in places:
-            places[place]+=1
-        else:
-            places[place]=1
-    print(places)
+    #print(S.strength_based_game_sim())
+    #print(S.Matchups)
+    interesting_Teams=["TU Sport I","TU Sport II"]
+    end_positions=[{} for _ in interesting_Teams]
+    strengthsim=1000
+    a1={("Theoretiker","TU Sport I"):[(0,25),(0,25)],("Los Pankows","TU Sport I"):[(0,25),(0,25)]}
+    for k in range(strengthsim):
+        Table=S.strength_based_game_sim(assumptions=a1)
+        #print(Table)
+        for i,T in enumerate(interesting_Teams):
+            p=Table.loc[T,"position"]
+            if p not in end_positions[i]:
+                end_positions[i][p]=1
+            else:
+                end_positions[i][p]+=1
+    print(end_positions)
+    brute=False
+    if brute:
+        standings=(S.brute_rest_simulation())#somehow wrong
+        print(standings[0])
+        places={}
+        for s in standings:
+            place=s.loc["TU Sport I","position"]
+            if place in places:
+                places[place]+=1
+            else:
+                places[place]=1
+        print(places)
 
 VBLigaWS2526()
 
 
-
-
-    
-
 def Test():
     d=pd.DataFrame({"points":[2,3,2,1],"position":[0,0,1,0]},index=["A","B","C","D"])
-    d.loc[0,"points"]=int(20)
-    print(d.loc[0,"points"],len(d))
+    #d.loc[0,"points"]=int(20)
+    #print(d.loc[0,"points"],len(d))
     print(d)
     print([x for x in d.index])
+    d.insert(2,"strength",[2,3,4,5])
     d.sort_values(by=["points","position"],inplace=True)
+    print(d["position"]/sum(d["points"]))
 
 
 #Test()
