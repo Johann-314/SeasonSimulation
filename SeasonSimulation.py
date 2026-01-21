@@ -222,8 +222,9 @@ def VBLigaWS2526():
     end_positions=[{} for _ in interesting_Teams]
     strengthsim=1000
     a1={("Theoretiker","TU Sport I"):[(0,25),(0,25)],("Los Pankows","TU Sport I"):[(0,25),(0,25)]}
+    a2={("TU Sport II","Who Knows"):[(25,0),(25,0)],("TU Sport II","GUS"):[(25,0),(25,0)]}
     for k in range(strengthsim):
-        Table=S.strength_based_game_sim(assumptions=a1)
+        Table=S.strength_based_game_sim(assumptions=a2)
         #print(Table)
         for i,T in enumerate(interesting_Teams):
             p=Table.loc[T,"position"]
