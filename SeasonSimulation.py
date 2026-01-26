@@ -44,7 +44,8 @@ class Season():
     def calculateTable(self,Games=None,type="Whitelist",reset=True,updateStrength=False):
         if reset:
             Table=pd.DataFrame({"points":[0 for i in self.Teams],"position":[0 for i in self.Teams],
-                                "games":[0 for i in self.Teams],"setdiff":[0 for i in self.Teams]},
+                                "games":[0 for i in self.Teams],"setdiff":[0 for i in self.Teams],"sets won":[0 for i in self.Teams],
+                                "sets lost":[0 for i in self.Teams]},
                                index=[i for i in self.Teams])
         else:
             Table=self.CurTable
@@ -55,23 +56,35 @@ class Season():
         else:
             considerGames=Games
         for T,R in considerGames.items():
-            p1,p2=points(T,R)
+            p1,p2=points(T,R,special=False) #no extra rules
             #print(p1,p2)
             if R:
                 Table.loc[T[0],"games"]+=1
                 Table.loc[T[1],"games"]+=1
                 if p1==0:
                     Table.loc[T[0],"setdiff"]-=2
+                    Table.loc[T[0],"sets lost"]+=2
                     Table.loc[T[1],"setdiff"]+=2
+                    Table.loc[T[1],"sets won"]+=2
                 elif p1==1:
                     Table.loc[T[0],"setdiff"]-=1
+                    Table.loc[T[0],"sets lost"]+=2
+                    Table.loc[T[0],"sets won"]+=1
                     Table.loc[T[1],"setdiff"]+=1
+                    Table.loc[T[1],"sets lost"]+=1
+                    Table.loc[T[1],"sets won"]+=2
                 elif p2==1:
-                    Table.loc[T[0],"setdiff"]+=1
                     Table.loc[T[1],"setdiff"]-=1
+                    Table.loc[T[1],"sets lost"]+=2
+                    Table.loc[T[1],"sets won"]+=1
+                    Table.loc[T[0],"setdiff"]+=1
+                    Table.loc[T[0],"sets lost"]+=1
+                    Table.loc[T[0],"sets won"]+=2
                 elif p2==0:
-                    Table.loc[T[0],"setdiff"]+=2
                     Table.loc[T[1],"setdiff"]-=2
+                    Table.loc[T[1],"sets lost"]+=2
+                    Table.loc[T[0],"setdiff"]+=2
+                    Table.loc[T[0],"sets won"]+=2
             Table.loc[T[0],"points"]+=p1
             Table.loc[T[1],"points"]+=p2
         Table.sort_values(by=["points","setdiff"],inplace=True,key=lambda x:-x)
@@ -211,16 +224,30 @@ def VBLigaWS2526():
                     #print(tn)
     #print(Games)
     Games[("TG Sonnenschein","TU Sport I")]=[(0,25),(25,0),(0,15)]#not actual result
-    Games[("TG Sonnenschein","GUS")]=[(25,0),(0,25),(15,0)]#Result doesn't matter appearantly
+    Games[("TG Sonnenschein","GUS")]=[(25,0),(0,25),(0,15)]#Result doesn't matter appearantly
+
+    Games[('Eintracht Südring', 'Theoretiker')]=[(25,0),(0,25),(0,15)]
+    Games[('Theoretiker', 'TU Sport I')]=[(0,25),(0,25)]
+    Games[('Theoretiker', 'Los Pankows')]=[(0,25),(0,25)]
+    Games[('Los Pankows', 'TU Sport I')]=[(25,0),(25,0)]
+    Games[('TU Sport II', 'Who Knows')]=[(25,0),(25,0)]
+    Games[('TU Sport II', 'GUS')]=[(25,0),(25,0)]
+    Games[('Who Knows', 'GUS')]=[(0,25),(0,25)]
+    Games[('Eintracht Südring', 'BCV')]=[(0,25),(0,25)]
+    Games[('Eintracht Südring', 'TG Sonnenschein')]=[(0,25),(0,25)]
+    Games[ ('BCV', 'TG Sonnenschein')]=[(25,0),(0,25),(15,0)] #vermutlich
+    
     S=Season("2526",[i[0] for i in Teams],Games)
+    print([i for i in S.Matchups if not S.Matchups[i]])
     #S_=S.copy()
-    print(S.CurTable)
+    #print(S.CurTable)
+    print(S.CurTable[["position","points","setdiff","sets won","sets lost","games"]])
     #print([i for i in S.CurTable])
     #print(S.strength_based_game_sim())
     #print(S.Matchups)
     interesting_Teams=["TU Sport I","TU Sport II"]
     end_positions=[{} for _ in interesting_Teams]
-    strengthsim=1000
+    strengthsim=0
     a1={("Theoretiker","TU Sport I"):[(0,25),(0,25)],("Los Pankows","TU Sport I"):[(0,25),(0,25)]}
     a2={("TU Sport II","Who Knows"):[(25,0),(25,0)],("TU Sport II","GUS"):[(25,0),(25,0)]}
     for k in range(strengthsim):
