@@ -273,8 +273,95 @@ def VBLigaWS2526():
                 places[place]=1
         print(places)
 
-VBLigaWS2526()
+#VBLigaWS2526()
 
+def VBLigaSoSe26():
+    Teams=[("BCV","BCV"),("Nusantra","Nus"),("Los Pankows","Los"),("Wir sind Helden","Wir"),("Theoretiker","Theo"),
+           ("TG Sonnenschein","TG"),("Eintracht Südring","ES"),("TU Sport I","TUI"),("TU Sport II","TUII")]
+    #Matchups={(Teams[i][1],Teams[j][1]) for i in range(len(Teams)) for j in range(i)}
+    #Spieltag1=[["BCV","GUS","LP"],["Who","Theo","TG"]]
+    #Get data
+    fields=[("<div class=\"table-cell team_name_inner\">","</div>"),
+            ("<span class=\"result_gt\">","</span>"),("<span class=\"result_lt\">","</span>"),
+            ]
+    status=0
+    Games={}
+    with open("LigaDaten26.txt","r",errors="ignore") as f:
+        for line in f:
+            for i,field in enumerate(fields):
+                if field[0] in line:
+                    #problem because both in same line
+                    start,end=field
+                    tn=line.split(start, 1)[1].split(end, 1)[0]
+                    if i==0:
+                        tn=tn.replace("Ã¼","ü")
+                        tn=tn.replace("&shy;","")
+                        if status==0:
+                            status=1
+                            curTeam1=tn
+                        elif status==1:
+                            status=0
+                            curTeam2=tn
+                            Games[(curTeam1,curTeam2)]=[]
+                    elif i==1 or i==2:
+                        #very weird special case, whatever happened here:
+                        if i==1 and tn=="0":
+                            print("Weird Game detected")
+                            status=0
+                            Games[(curTeam1,curTeam2)].append((15,0))
+                        elif status==0:
+                            status=1
+                            score1=tn
+                            if len(line.split(start, 1)[0])<len(line.split(start, 1)[1]):
+                                pos=0
+                            else:
+                                pos=1
+                        elif status==1:
+                            status=0
+                            if pos==0:
+                                Games[(curTeam1,curTeam2)].append((int(score1),int(tn)))
+                            else:
+                                Games[(curTeam1,curTeam2)].append((int(tn),int(score1)))
+                    #print(tn)
+    #print(Games)
+    
+    S=Season("2526",[i[0] for i in Teams],Games)
+    print([i for i in S.Matchups if not S.Matchups[i]])
+    #S_=S.copy()
+    #print(S.CurTable)
+    print(S.CurTable[["position","points","setdiff","sets won","sets lost","games"]])
+    #print([i for i in S.CurTable])
+    #print(S.strength_based_game_sim())
+    #print(S.Matchups)
+    interesting_Teams=["TU Sport I","TU Sport II"]
+    end_positions=[{} for _ in interesting_Teams]
+    strengthsim=0
+    a1={("Theoretiker","TU Sport I"):[(0,25),(0,25)],("Los Pankows","TU Sport I"):[(0,25),(0,25)]}
+    a2={("TU Sport II","Who Knows"):[(25,0),(25,0)],("TU Sport II","GUS"):[(25,0),(25,0)]}
+    for k in range(strengthsim):
+        Table=S.strength_based_game_sim(assumptions=a2)
+        #print(Table)
+        for i,T in enumerate(interesting_Teams):
+            p=Table.loc[T,"position"]
+            if p not in end_positions[i]:
+                end_positions[i][p]=1
+            else:
+                end_positions[i][p]+=1
+    print(end_positions)
+    brute=False
+    if brute:
+        standings=(S.brute_rest_simulation())#somehow wrong
+        print(standings[0])
+        places={}
+        for s in standings:
+            place=s.loc["TU Sport I","position"]
+            if place in places:
+                places[place]+=1
+            else:
+                places[place]=1
+        print(places)
+
+VBLigaSoSe26()
 
 def Test():
     d=pd.DataFrame({"points":[2,3,2,1],"position":[0,0,1,0]},index=["A","B","C","D"])
