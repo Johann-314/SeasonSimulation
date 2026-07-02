@@ -276,7 +276,7 @@ def VBLigaWS2526():
 #VBLigaWS2526()
 
 def VBLigaSoSe26():
-    Teams=[("BCV","BCV"),("Nusantra","Nus"),("Los Pankows","Los"),("Wir sind Helden","Wir"),("Theoretiker","Theo"),
+    Teams=[("BCV","BCV"),("Nusantara","Nus"),("Los Pankows","Los"),("Wir Sind Helden","Wir"),("Theoretiker","Theo"),
            ("TG Sonnenschein","TG"),("Eintracht Südring","ES"),("TU Sport I","TUI"),("TU Sport II","TUII")]
     #Matchups={(Teams[i][1],Teams[j][1]) for i in range(len(Teams)) for j in range(i)}
     #Spieltag1=[["BCV","GUS","LP"],["Who","Theo","TG"]]
@@ -286,7 +286,7 @@ def VBLigaSoSe26():
             ]
     status=0
     Games={}
-    with open("LigaDaten26.txt","r",errors="ignore") as f:
+    with open("Random\SeasonSimulation\LigaDaten26.txt","r",errors="ignore") as f:
         for line in f:
             for i,field in enumerate(fields):
                 if field[0] in line:
@@ -329,17 +329,17 @@ def VBLigaSoSe26():
     print([i for i in S.Matchups if not S.Matchups[i]])
     #S_=S.copy()
     #print(S.CurTable)
-    print(S.CurTable[["position","points","setdiff","sets won","sets lost","games"]])
+    print(S.CurTable)#[["position","points","setdiff","sets won","sets lost","games"]])
     #print([i for i in S.CurTable])
     #print(S.strength_based_game_sim())
     #print(S.Matchups)
     interesting_Teams=["TU Sport I","TU Sport II"]
     end_positions=[{} for _ in interesting_Teams]
     strengthsim=0
-    a1={("Theoretiker","TU Sport I"):[(0,25),(0,25)],("Los Pankows","TU Sport I"):[(0,25),(0,25)]}
-    a2={("TU Sport II","Who Knows"):[(25,0),(25,0)],("TU Sport II","GUS"):[(25,0),(25,0)]}
+    # a1={("Theoretiker","TU Sport I"):[(0,25),(0,25)],("Los Pankows","TU Sport I"):[(0,25),(0,25)]}
+    # a2={("TU Sport II","Who Knows"):[(25,0),(25,0)],("TU Sport II","GUS"):[(25,0),(25,0)]}
     for k in range(strengthsim):
-        Table=S.strength_based_game_sim(assumptions=a2)
+        Table=S.strength_based_game_sim()#assumptions=a2)
         #print(Table)
         for i,T in enumerate(interesting_Teams):
             p=Table.loc[T,"position"]
@@ -354,7 +354,7 @@ def VBLigaSoSe26():
         print(standings[0])
         places={}
         for s in standings:
-            place=s.loc["TU Sport I","position"]
+            place=s.loc["TU Sport II","position"]
             if place in places:
                 places[place]+=1
             else:
@@ -372,6 +372,17 @@ def Test():
     d.insert(2,"strength",[2,3,4,5])
     d.sort_values(by=["points","position"],inplace=True)
     print(d["position"]/sum(d["points"]))
+
+    L=[{4: 176, 6: 270, 5: 306, 2: 82, 7: 39, 3: 112, 1: 15}, {6: 426, 5: 289, 3: 117, 4: 141, 2: 27}]
+
+    def count_Quals(L):
+        Q=len(L)*[0]
+        for i in range(len(L)):
+            for key,val in L[i].items():
+                if key <=4:
+                    Q[i]+=val
+        return Q
+    print([i/1000 for i in count_Quals(L)])
 
 
 #Test()
