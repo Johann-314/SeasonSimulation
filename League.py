@@ -89,7 +89,7 @@ class Season():
             TempSeason.calculate_strength()
         for g in assumptions:
             try:
-                i=TempSeason.Matchups.index()
+                i=TempSeason.Matchups.index([g[0],[]])
             except ValueError:
                 raise ValueError("Invalid assumption")
             TempSeason.Matchups[i]=g

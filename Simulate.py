@@ -1,4 +1,6 @@
 import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
 import League
 
 def random_round(x):#for more realistic rounding
@@ -30,7 +32,9 @@ def simulate_game(p,gamesFT=[25,25,15]):
             break
     return result
 
-def multi_sim(S,interesting,assumptions=[],n=10,showProgress=False):
+def multi_sim(S,interesting=[],assumptions=[],n=10,showProgress=False,display=False):
+    if not interesting:
+        interesting=list(S.CurTable.index)
     Places=[len(S.Teams)*[0] for t in interesting]
     S.calculate_strength()
     if showProgress:
@@ -38,8 +42,24 @@ def multi_sim(S,interesting,assumptions=[],n=10,showProgress=False):
     for i in range(n):
         if showProgress and i%displayEvery==0:
             print(str(round(100*i/n))+"%")
-        T=S.simulate_rest()
+        T=S.simulate_rest(assumptions=assumptions)
         for i in range(len(interesting)):
-            Places[i][T.CurTable.loc[interesting[i],"position"]]+=1
+            Places[i][T.CurTable.loc[interesting[i],"position"]-1]+=1
+    if display:
+        # fig,ax = plt.subplots()
+        # ax.imshow([[j/n for j in i] for i in Places])
+        plt.figure(figsize=(8, 6))
+        row_names=interesting
+        col_names=list(range(1,len(interesting)+1))
+        sns.heatmap(
+            [[round(1000*j/n)/10 for j in i] for i in Places],
+            annot=True,        # write numbers in cells
+            fmt=".2f",         # formatting of numbers
+            cmap="viridis",    # color map
+            xticklabels=col_names,
+            yticklabels=row_names,
+            linewidths=0.5,    # grid lines
+            square=True        # make cells square
+        )
+        plt.show()
     return Places
-        
