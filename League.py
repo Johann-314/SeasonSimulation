@@ -4,6 +4,7 @@ import copy
 
 import Simulate
 import StrengthCalc
+import SaveData
 
 
 class Season():
@@ -13,67 +14,42 @@ class Season():
         self.Matchups=Matchups
         self.CurTable=CurTable
         if not len(CurTable.index):
-            self.CurTable=self.calculateTable()
+            self.calculateTable()
     def calculateTable(self): #option to only update but should be reasonably fast as is
-        if not len(self.CurTable.index):
-            Table=pd.DataFrame({"points":[0 for i in self.Teams],"position":[0 for i in self.Teams],
-                                    "games":[0 for i in self.Teams],"setdiff":[0 for i in self.Teams],"sets won":[0 for i in self.Teams],
-                                    "sets lost":[0 for i in self.Teams]},
+        Table=pd.DataFrame({"points":[0 for i in self.Teams],"position":[0 for i in self.Teams],
+                                    "games":[0 for i in self.Teams],"sets won":[0 for i in self.Teams],
+                                    "sets lost":[0 for i in self.Teams],"rallies won":[0 for i in self.Teams],
+                                    "rallies lost":[0 for i in self.Teams]},
                                 index=[i for i in self.Teams])
-        else:
-            Table=pd.DataFrame({"points":[0 for i in self.Teams],"position":[0 for i in self.Teams],
-                                    "games":[0 for i in self.Teams],"setdiff":[0 for i in self.Teams],"sets won":[0 for i in self.Teams],
-                                    "sets lost":[0 for i in self.Teams]},
-                                index=[i for i in self.Teams])
+        if len(self.CurTable.index):
             Table=pd.concat([self.CurTable,Table])
             Table=Table.groupby(level=0).last()
         #self.CurTable.loc[["points","position","games","setdiff","sets won","sets lost"]]
-
         for M in self.Matchups:
             T=M[0]
             R=M[1]
-            p1,p2=points(R)
-            #print(p1,p2)
-            if R: #update all the conditional stuff
-                Table.loc[T[0],"games"]+=1
-                Table.loc[T[1],"games"]+=1
-                if p1==0:
-                    Table.loc[T[0],"setdiff"]-=2
-                    Table.loc[T[0],"sets lost"]+=2
-                    Table.loc[T[1],"setdiff"]+=2
-                    Table.loc[T[1],"sets won"]+=2
-                elif p1==1:
-                    Table.loc[T[0],"setdiff"]-=1
-                    Table.loc[T[0],"sets lost"]+=2
-                    Table.loc[T[0],"sets won"]+=1
-                    Table.loc[T[1],"setdiff"]+=1
-                    Table.loc[T[1],"sets lost"]+=1
-                    Table.loc[T[1],"sets won"]+=2
-                elif p2==1:
-                    Table.loc[T[1],"setdiff"]-=1
-                    Table.loc[T[1],"sets lost"]+=2
-                    Table.loc[T[1],"sets won"]+=1
-                    Table.loc[T[0],"setdiff"]+=1
-                    Table.loc[T[0],"sets lost"]+=1
-                    Table.loc[T[0],"sets won"]+=2
-                elif p2==0:
-                    Table.loc[T[1],"setdiff"]-=2
-                    Table.loc[T[1],"sets lost"]+=2
-                    Table.loc[T[0],"setdiff"]+=2
-                    Table.loc[T[0],"sets won"]+=2
-            Table.loc[T[0],"points"]+=p1
-            Table.loc[T[1],"points"]+=p2
-        Table.sort_values(by=["points","setdiff"],inplace=True,key=lambda x:-x) #sort
-        curpoints=Table.iloc[0]["points"]
-        curdiff=Table.iloc[0]["setdiff"]
-        curpos=1
-        for i,y in enumerate(Table.index):#calculate positions
-            if Table.loc[y,"points"]==curpoints and Table.loc[y,"setdiff"]==curdiff:
-                Table.loc[y,"position"]=curpos
-            else:
-                curpoints=Table.loc[y,"points"]
-                Table.loc[y,"position"]=i+1#0 ndexed
-                curpos=i+1
+            if R: #update all the stuff
+                rallies=[sum([r[j] for r in R]) for j in range(2)]
+                sets=[sum([r[j]>r[1-j] for r in R]) for j in range(2)]#unneccesarily compact :)
+                for i in range(2): #1-i is the other index
+                    Table.loc[T[i],"games"]+=1
+                    Table.loc[T[i],"sets won"]+=sets[i]
+                    Table.loc[T[i],"sets lost"]+=sets[1-i]
+                    Table.loc[T[i],"rallies won"]+=rallies[i]
+                    Table.loc[T[i],"rallies lost"]+=rallies[1-i]
+                    Table.loc[T[i],"points"]+=sets[i]+(sets[1-i]==0)
+        Table["setdiff"]=Table["sets won"]-Table["sets lost"]
+        Table["setquot"]=(Table["sets won"]/Table["sets lost"]).where(Table["sets lost"] != 0, float("inf"))
+        Table["raldiff"]=Table["rallies won"]-Table["rallies lost"]
+        Table["ralquot"]=(Table["rallies won"]/Table["rallies lost"]).where(Table["rallies lost"] != 0, float("inf"))
+        #sorting and position determining
+        characteristics=["points","setdiff","setquot","raldiff","ralquot"] #sorting criteria
+        Table.sort_values(by=characteristics,inplace=True,key=lambda x:-x) #sort
+        diff = Table[characteristics].ne(Table[characteristics].shift()).any(axis=1) # True where row differs from previous row
+        group_id = diff.cumsum() # Group ID for identical blocks
+        block_sizes = Table.groupby(group_id).size() # Size of each block
+        Table["position"] = group_id.map(block_sizes.cumsum()) # Position = cumulative sum of block sizes up to this block
+        self.CurTable=Table
         return Table
     def calculate_strength(self):
         s=StrengthCalc.gradPdescent(self.Matchups,np.ones(len(self.Teams)),namelist=list(self.CurTable.index))
@@ -100,7 +76,8 @@ class Season():
                 g[1]=Simulate.simulate_game(s1/(s1+s2))
         TempSeason.CurTable=TempSeason.calculateTable()
         return TempSeason
-                
+    def save(self):
+        SaveData.update_history(self.Matchups,self.Name)
         
 
 
