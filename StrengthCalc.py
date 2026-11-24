@@ -1,3 +1,8 @@
+"""
+Calculating strength coefficients for the teams
+Method: gradient descent on the max-likelihood function
+self-coded
+"""
 import numpy as np
 
 def vec2simplexM1(vecX, l=1.):#projection algorithm by Christian Bauckhage - ResearchGate

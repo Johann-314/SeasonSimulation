@@ -1,3 +1,7 @@
+"""
+Main module: Season class with numerous methods
+self-coded
+"""
 import pandas as pd
 import numpy as np
 import copy
@@ -16,8 +20,9 @@ class Season():
         if not len(CurTable.index):
             self.calculateTable()
     def calculateTable(self): #option to only update but should be reasonably fast as is
-        Table=pd.DataFrame({"points":[0 for i in self.Teams],"position":[0 for i in self.Teams],
-                                    "games":[0 for i in self.Teams],"sets won":[0 for i in self.Teams],
+        Table=pd.DataFrame({"position":[0 for i in self.Teams],"points":[0 for i in self.Teams],
+                                    "games":[0 for i in self.Teams],"games won":[0 for i in self.Teams],
+                                    "games lost":[0 for i in self.Teams],"sets won":[0 for i in self.Teams],
                                     "sets lost":[0 for i in self.Teams],"rallies won":[0 for i in self.Teams],
                                     "rallies lost":[0 for i in self.Teams]},
                                 index=[i for i in self.Teams])
@@ -33,6 +38,8 @@ class Season():
                 sets=[sum([r[j]>r[1-j] for r in R]) for j in range(2)]#unneccesarily compact :)
                 for i in range(2): #1-i is the other index
                     Table.loc[T[i],"games"]+=1
+                    Table.loc[T[i],"games won"]+=sets[i]>sets[1-i]
+                    Table.loc[T[i],"games lost"]+=sets[1-i]>sets[i]
                     Table.loc[T[i],"sets won"]+=sets[i]
                     Table.loc[T[i],"sets lost"]+=sets[1-i]
                     Table.loc[T[i],"rallies won"]+=rallies[i]
@@ -43,7 +50,7 @@ class Season():
         Table["raldiff"]=Table["rallies won"]-Table["rallies lost"]
         Table["ralquot"]=(Table["rallies won"]/Table["rallies lost"]).where(Table["rallies lost"] != 0, float("inf"))
         #sorting and position determining
-        characteristics=["points","setdiff","setquot","raldiff","ralquot"] #sorting criteria
+        characteristics=["points","games won","setdiff","setquot","raldiff","ralquot"] #sorting criteria
         Table.sort_values(by=characteristics,inplace=True,key=lambda x:-x) #sort
         diff = Table[characteristics].ne(Table[characteristics].shift()).any(axis=1) # True where row differs from previous row
         group_id = diff.cumsum() # Group ID for identical blocks
@@ -56,7 +63,7 @@ class Season():
         if "strength" in self.CurTable.keys():
             self.CurTable["strength"]=s
         else:
-            self.CurTable.insert(4,"strength",s)
+            self.CurTable.insert(3,"strength",s)
     def simulate_rest(self,assumptions=[]):
         TempSeason=Season(self.Name+"Tmp",self.Teams,copy.deepcopy(self.Matchups),self.CurTable.copy()) #potential problems without copy
         try:#ensure that strength was calculated

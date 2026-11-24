@@ -1,3 +1,7 @@
+"""
+purpose: simulate missing matches based on strength scores calculated with StrengthCalc.py
+self-coded
+"""
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns

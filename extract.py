@@ -1,4 +1,7 @@
-
+"""
+Purpose: extract the results from html-code given in LigaDaten26.txt
+self-coded
+"""
 
 def extract_data(name="Random\SeasonSimulation\LigaDaten26.txt"):
     with open(name,"r",errors="ignore") as f:

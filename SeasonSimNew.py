@@ -1,3 +1,6 @@
+"""
+Executes the simulation
+"""
 import Simulate
 import League
 import extract
@@ -9,11 +12,14 @@ import SaveData
 #games=extract.extract_data() #you can insert the name of the file here
 #Take from existing xlsx file
 games=SaveData.load_tournament("SoSe2026Post4")
-print(games)
+
+
 
 S=League.Season("SoSe2026",extract.names(games),games)
 S.calculate_strength()
-print(S.CurTable) #Table with strengths
+print("\n")
+print(S.CurTable[["position","points","games won","sets won","sets lost","strength","rallies won","rallies lost"]]) #Table with strengths
+print("\n")
 #S.save()
 
 

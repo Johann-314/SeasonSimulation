@@ -1,6 +1,6 @@
 """
 Purpose: Enter additional result by hand, without having to Code it directly into Python
-Largely vibe-coded module, made mostly redundant by SaveData and Excel 
+Largely vibe-coded (AI assisted) module, made mostly redundant by SaveData and Excel
 """
 
 import tkinter as tk
